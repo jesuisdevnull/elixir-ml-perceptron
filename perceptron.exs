@@ -43,12 +43,12 @@ defmodule Neuron do
 
 end
 
-defmodule NeuralNet do
+defmodule SLNeuralNet do
   defstruct [:neurons, rate: 0.07, margin: 0.02]
 
   def create(num_neurons, num_inputs) when is_integer(num_neurons) do
     ns = for n <- 1..num_neurons, do: Neuron.create(n,num_inputs)
-    %NeuralNet{neurons: ns}
+    %SLNeuralNet{neurons: ns}
   end
 
   def feed_forward(net, input) do
@@ -56,7 +56,7 @@ defmodule NeuralNet do
   end
 
   def train(net, input, label) do
-    output = NeuralNet.feed_forward(net, input)
+    output = SLNeuralNet.feed_forward(net, input)
     labeled_outputs = Enum.zip([net.neurons, label,output]) 
     updated_neurons = for {neuron, expected, actual} <- labeled_outputs, do: Neuron.update_weights(neuron, input, expected, actual, net.rate)
     %{net | neurons: updated_neurons}
@@ -70,13 +70,46 @@ defmodule NeuralNet do
       train(net, input, label)
     end
   end
+end
+
+defmodule MLNeuralNet do
+  defstruct [:layers, rate: 0.07, margin: 0.02]
+
+  def create(neuron_count, layer_count,input_count, output_count) do
+    hidden_layers = for layer_n <- 1..layer_count, do: 
+      for neuron_n <- 1..neuron_count, do: 
+       (if layer_n == 1 do 
+          Neuron.create(neuron_n, input_count)
+        else
+          Neuron.create(neuron_n, neuron_count)
+       end)
+    output_layer = for n <- 1..output_count, do: Neuron.create(n, neuron_count)
+    layers = hidden_layers ++ [output_layer]
+    layers |> IO.inspect
+    %MLNeuralNet{layers: layers}
+  end
+
+  def forward_pass(net, input, _) do 
+    output_matrix = calculate_layer_output(net.layers, input)
+    net_output = List.last(output_matrix)
+    if length(net_output) == 1 do
+      %{output: hd(net_output), history: output_matrix}
+    else
+      %{output: net_output, history: output_matrix}
+    end
+  end
+
+  defp calculate_layer_output(layer_list, _) when layer_list == [] do
+    []
+  end
+
+  defp calculate_layer_output(layer_list, input) when is_list(layer_list) do
+    [layer | rest] = layer_list
+    output =  for neur <- layer, do: Neuron.activate(neur, input)
+    [output | calculate_layer_output(rest, output)]
+  end
 
 end
 
-input = [[0,1,0,0,0,1,1,0,0,1],[1,0,0,0,0]]
-nn = NeuralNet.create(5,10)
-f_out = NeuralNet.feed_forward(nn,Enum.at(input, 0))
-f_out |> IO.inspect
-nn = NeuralNet.train(nn, Enum.at(input,0), Enum.at(input,1), 500)
-l_out =  NeuralNet.feed_forward(nn,Enum.at(input, 0))
-l_out |> IO.inspect
+nn = MLNeuralNet.create(3, 3, 5, 1) 
+MLNeuralNet.forward_pass(nn,[1,2,3,4,5],0.5) |> IO.inspect
