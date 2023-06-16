@@ -6,6 +6,10 @@ defmodule Utils do
   def sigmoid(x) do
     1/(1+:math.exp(-x))
   end
+
+  def sigmoid_derivative(x) do
+    Utils.sigmoid(x)*(1-Utils.sigmoid(x))
+  end
 end
 
 defmodule VecOps do
@@ -57,7 +61,7 @@ defmodule SLNeuralNet do
 
   def train(net, input, label) do
     output = SLNeuralNet.feed_forward(net, input)
-    labeled_outputs = Enum.zip([net.neurons, label,output]) 
+    labeled_outputs = Enum.zip([net.neurons, label,output])
     updated_neurons = for {neuron, expected, actual} <- labeled_outputs, do: Neuron.update_weights(neuron, input, expected, actual, net.rate)
     %{net | neurons: updated_neurons}
   end
@@ -76,9 +80,9 @@ defmodule MLNeuralNet do
   defstruct [:layers, rate: 0.07, margin: 0.02]
 
   def create(neuron_count, layer_count,input_count, output_count) do
-    hidden_layers = for layer_n <- 1..layer_count, do: 
-      for neuron_n <- 1..neuron_count, do: 
-       (if layer_n == 1 do 
+    hidden_layers = for layer_n <- 1..layer_count, do:
+      for neuron_n <- 1..neuron_count, do:
+       (if layer_n == 1 do
           Neuron.create(neuron_n, input_count)
         else
           Neuron.create(neuron_n, neuron_count)
@@ -89,7 +93,7 @@ defmodule MLNeuralNet do
     %MLNeuralNet{layers: layers}
   end
 
-  def forward_pass(net, input, _) do 
+  def forward_pass(net, input, _) do
     output_matrix = calculate_layer_output(net.layers, input)
     net_output = List.last(output_matrix)
     if length(net_output) == 1 do
@@ -111,5 +115,5 @@ defmodule MLNeuralNet do
 
 end
 
-nn = MLNeuralNet.create(3, 3, 5, 1) 
+nn = MLNeuralNet.create(3, 3, 5, 1)
 MLNeuralNet.forward_pass(nn,[1,2,3,4,5],0.5) |> IO.inspect
